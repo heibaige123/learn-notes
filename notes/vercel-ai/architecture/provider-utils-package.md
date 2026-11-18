@@ -1,4 +1,4 @@
-# `packages/provider-utils` 简述
+# `ai/packages/provider-utils` 简述
 
 > `@ai-sdk/provider-utils` v5.0.82 ｜ 171 个 `.ts` / 12428 行 ｜ 98 个测试 + 15 个类型测试 ｜ dist 5 个 `.js` / 3.4M
 
@@ -120,7 +120,7 @@ export class ExtractionLanguageModel implements ExtractionModelV4 {
 
 用户和 provider 共同使用的词汇表：`Tool` / `ToolSet` / `ExecutableTool` / `executeTool`、`ModelMessage`（system / user / assistant / tool）、`ContentPart`（text / file / image / reasoning / reasoning-file / custom / tool-call / tool-result）、`ToolApprovalRequest` / `ToolApprovalResponse`、`ProviderReference`、`Sandbox`。
 
-`ai` 包的 `src/index.ts:38` 直接从 `@ai-sdk/provider-utils` 再导出 `ToolSet` 等——**这层类型已经不归 `ai` 独有了**。配套的 `provider-defined-tool-factory.ts` / `provider-executed-tool-factory.ts` 提供 `createProviderDefinedToolFactory*` 这类工厂。
+`ai/packages/ai/src/index.ts:38` 直接从 `@ai-sdk/provider-utils` 再导出 `ToolSet` 等——**这层类型已经不归 `ai` 独有了**。配套的 `provider-defined-tool-factory.ts` / `provider-executed-tool-factory.ts` 提供 `createProviderDefinedToolFactory*` 这类工厂。
 
 ### 3.10 零碎但常用
 

@@ -21,7 +21,7 @@
 | [`architecture/provider-package.md`](./architecture/provider-package.md)             | `@ai-sdk/provider` 单包简述：规范层接口、多版本共存、目录构成              |
 | [`architecture/provider-utils-package.md`](./architecture/provider-utils-package.md) | `@ai-sdk/provider-utils` 单包简述：HTTP/响应解析/schema/媒体识别/安全/流式 |
 | [`architecture/questions.md`](./architecture/questions.md)                           | 架构层未决问题（停止条件、重试、v3/v4 适配、UI 消息流）                    |
-| [`core/questions.md`](./core/questions.md)                                           | `packages/ai` 未决问题（part 缓冲时序、低内存模式）                        |
+| [`core/questions.md`](./core/questions.md)                                           | `ai/packages/ai` 未决问题（part 缓冲时序、低内存模式）                     |
 
 主题文档与问题清单的分工：**能确认的并进主题文档，查不清的留在 questions**；问题解决后把结论回填，并从清单里删掉。
 
@@ -29,7 +29,7 @@
 
 ## 3. 写作要求
 
-- **每条结论带证据**：写成 `packages/.../file.ts:123`。行号会随源码演进漂移，失效时按函数名搜。
+- **每条结论带证据**：从项目目录名写起，锚在符号名上。写 `ai/packages/ai/src/generate-text/stream-text.ts` 的 `streamText`，不写 `packages/.../file.ts:123`。行号可附，对不上时按函数名搜。
 - **路径相对**：文档之间用相对链接（`../core/...`），不写绝对路径。
 - **未确认的别伪装成结论**：写进 `questions.md`，按「背景 / 我的假设 / 验证方式 / 结论 / 证据 / 相关」六段填；结论留空就是待办。不再维护 `templates/`，格式直接照抄已有条目。
 - 中文正文，代码标识符保留原文。

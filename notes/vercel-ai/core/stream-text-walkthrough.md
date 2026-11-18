@@ -4,7 +4,7 @@
 
 与 [`../architecture/ai-sdk-architecture.md`](../architecture/ai-sdk-architecture.md) 的分工：那篇是「静态地图」（谁在哪、有哪些机制），这篇是「动态走位」（一次调用按什么顺序穿过哪些文件、哪些行）。行号会随源码演进漂移，失效时按函数名搜索。
 
-> 所有路径相对仓库根目录。
+> 路径从项目目录名写起（`ai/...`）。
 
 ## 0. 全局速览
 
@@ -12,16 +12,16 @@
 调用方
   │ streamText({ model, messages, tools, stopWhen })
   ▼
-packages/ai/src/generate-text/stream-text.ts          streamText → streamTextInternal
+ai/packages/ai/src/generate-text/stream-text.ts          streamText → streamTextInternal
   │  standardizePrompt / convertToLanguageModelPrompt / prepareTools
   ▼
-packages/ai/src/generate-text/stream-language-model-call.ts
+ai/packages/ai/src/generate-text/stream-language-model-call.ts
   │  resolvedModel.doStream({...})                    ← 唯一收敛点
   ▼
-packages/<provider>/.../xxx-language-model.ts          doStream：构 body、发请求、翻译 chunk
+ai/packages/<provider>/.../xxx-language-model.ts          doStream：构 body、发请求、翻译 chunk
   │  postJsonToApi
   ▼
-packages/provider-utils/src/post-to-api.ts             fetch()
+ai/packages/provider-utils/src/post-to-api.ts             fetch()
   │  SSE → createEventSourceResponseHandler → ParseResult<chunk>
   ▲
   │ provider TransformStream → LanguageModelV4StreamPart
@@ -34,7 +34,7 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 ## 1. 入口与分流
 
-`packages/ai/src/generate-text/stream-text.ts`
+`ai/packages/ai/src/generate-text/stream-text.ts`
 
 | 行   | 内容                                                                |
 | ---- | ------------------------------------------------------------------- |
@@ -54,13 +54,13 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 ## 2. 输入归一化（你的 `messages` 变成什么）
 
-| 位置                                                            | 作用                                                                                                     |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `stream-text.ts:2219`                                           | `await standardizePrompt({ prompt, instructions, messages, allowSystemInMessages })`                     |
-| `packages/ai/src/prompt/standardize-prompt.ts:27`               | 三种入参（`prompt` / `system+prompt` / `messages`）混用与冲突的裁决，产出 `{ instructions, messages }`   |
-| `packages/ai/src/prompt/convert-to-language-model-prompt.ts:36` | `ModelMessage[]` → `LanguageModelV4Prompt`（user/assistant/tool 消息、图片、文件、cache 标记的实际形态） |
+| 位置                                                               | 作用                                                                                                     |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `stream-text.ts:2219`                                              | `await standardizePrompt({ prompt, instructions, messages, allowSystemInMessages })`                     |
+| `ai/packages/ai/src/prompt/standardize-prompt.ts:27`               | 三种入参（`prompt` / `system+prompt` / `messages`）混用与冲突的裁决，产出 `{ instructions, messages }`   |
+| `ai/packages/ai/src/prompt/convert-to-language-model-prompt.ts:36` | `ModelMessage[]` → `LanguageModelV4Prompt`（user/assistant/tool 消息、图片、文件、cache 标记的实际形态） |
 
-这是「UI message 层」与「model message 层」之间的边界，配合 `architecture/message-layers.md` 阅读。
+这是「UI message 层」与「model message 层」之间的边界，配合 `ai/architecture/message-layers.md` 阅读。
 
 **注意**：`convertToLanguageModelPrompt` 每个 step 只能调用一次——`stream-language-model-call.ts:275` 有注释解释原因（它会做一次性内容转换，重复调用会得到不一致结果）。
 
@@ -75,11 +75,11 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 2722  streamLanguageModelCall({ ... })              → 跨文件进入下一站
 ```
 
-重试边界不是简单 catch：`1053` 的 `isStreamRetryBoundaryPart` + `StreamRetryAttemptBoundary` part 保证**已经在用户侧产生的 part 不会被重复推送**，同时工具调用不会被重复执行。这是 `architecture/stream-text-loop-control.md` 关心的问题之一。
+重试边界不是简单 catch：`1053` 的 `isStreamRetryBoundaryPart` + `StreamRetryAttemptBoundary` part 保证**已经在用户侧产生的 part 不会被重复推送**，同时工具调用不会被重复执行。这是 `ai/architecture/stream-text-loop-control.md` 关心的问题之一。
 
 ## 4. 核心枢纽 `stream-language-model-call.ts`（1018 行，最值得精读）
 
-`packages/ai/src/generate-text/stream-language-model-call.ts`
+`ai/packages/ai/src/generate-text/stream-language-model-call.ts`
 
 | 行      | 内容                                                                                                                                 |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -97,7 +97,7 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 ## 5. 进入 provider（标本：DeepSeek，764 行，足够简单）
 
-`packages/deepseek/src/chat/deepseek-chat-language-model.ts`
+`ai/packages/deepseek/src/chat/deepseek-chat-language-model.ts`
 
 | 行      | 内容                                                                                                                                                              |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -110,11 +110,11 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 | 578     | `transform()`：先吐 `{ type: 'raw' }`（若 `includeRawChunks`），再逐 chunk 翻译                                                                                   |
 | 761     | 返回前把 `response.headers` 放进结果对象                                                                                                                          |
 
-**关键取舍**：provider **不做流控、不做工具执行、不管多步、不重试**。职责只有三件——构 body、发请求、把自家 chunk 翻译成 part。重试、工具循环、part 缓冲全在 core。中间件（`packages/ai/src/middleware/wrap-language-model.ts:75`）就是在这层外面再包一个同样 `specificationVersion: 'v4'` 的对象，所以 core 无法区分真假模型。
+**关键取舍**：provider **不做流控、不做工具执行、不管多步、不重试**。职责只有三件——构 body、发请求、把自家 chunk 翻译成 part。重试、工具循环、part 缓冲全在 core。中间件（`ai/packages/ai/src/middleware/wrap-language-model.ts:75`）就是在这层外面再包一个同样 `specificationVersion: 'v4'` 的对象，所以 core 无法区分真假模型。
 
 ## 6. 真正的字节出口
 
-`packages/provider-utils/src/post-to-api.ts`
+`ai/packages/provider-utils/src/post-to-api.ts`
 
 | 行     | 内容                          |
 | ------ | ----------------------------- |
@@ -123,10 +123,10 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 相邻必看：
 
-- `packages/provider-utils/src/fetch-with-validated-redirects.ts:72 / 174 / 183` —— URL 校验与重定向时的逐跳鉴权（`ai-sdk/require-validate-url` oxlint 规则管的就是这里；规则要求每次 `getFromApi` 显式传 `validateUrl`）
-- `packages/provider-utils/src/get-from-api.ts` —— 下载类请求
-- `packages/provider-utils/src/combine-headers.ts`、`resolve.ts` —— `Resolvable` 的合并语义（provider 默认 header 与用户 header 谁覆盖谁）
-- `contributing/secure-url-handling.md`
+- `ai/packages/provider-utils/src/fetch-with-validated-redirects.ts:72 / 174 / 183` —— URL 校验与重定向时的逐跳鉴权（`ai-sdk/require-validate-url` oxlint 规则管的就是这里；规则要求每次 `getFromApi` 显式传 `validateUrl`）
+- `ai/packages/provider-utils/src/get-from-api.ts` —— 下载类请求
+- `ai/packages/provider-utils/src/combine-headers.ts`、`resolve.ts` —— `Resolvable` 的合并语义（provider 默认 header 与用户 header 谁覆盖谁）
+- `ai/contributing/secure-url-handling.md`
 
 ## 7. 流回到 core
 
@@ -145,19 +145,19 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 ## 8. 停止与下一步
 
-- `packages/ai/src/generate-text/stop-condition.ts`
+- `ai/packages/ai/src/generate-text/stop-condition.ts`
   - `isStepCount`（27）、`isLoopFinished`（37）、`hasToolCall`（47）
 - `stream-text.ts:994` 把 `stopWhen` 拍平成数组，每步结束后逐条判定
 - 判定继续 → 回到第 3 站，带上工具结果再跑一轮
 
 ## 9. 对外的两套流
 
-| 输出                         | 类型             | 位置                                                                                |
-| ---------------------------- | ---------------- | ----------------------------------------------------------------------------------- |
-| `result.fullStream`          | `TextStreamPart` | `packages/ai/src/generate-text/stream-text-result.ts`                               |
-| `result.toUIMessageStream()` | `UIMessageChunk` | `stream-text.ts:3872` → `packages/ai/src/ui-message-stream/to-ui-message-stream.ts` |
+| 输出                         | 类型             | 位置                                                                                   |
+| ---------------------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `result.fullStream`          | `TextStreamPart` | `ai/packages/ai/src/generate-text/stream-text-result.ts`                               |
+| `result.toUIMessageStream()` | `UIMessageChunk` | `stream-text.ts:3872` → `ai/packages/ai/src/ui-message-stream/to-ui-message-stream.ts` |
 
-`toUIMessageStream` 之后接 `pipe-ui-message-stream-to-response.ts` → `create-sse-stream-with-keep-alive.ts`，再往上是 `packages/react` 的 `useChat`。`consumeStream()` 在 `3786`。
+`toUIMessageStream` 之后接 `pipe-ui-message-stream-to-response.ts` → `create-sse-stream-with-keep-alive.ts`，再往上是 `ai/packages/react` 的 `useChat`。`consumeStream()` 在 `3786`。
 
 结果对象**同时是 `PromiseLike` 和 `AsyncIterable`**：`await result` 拿聚合值，`for await` 拿增量；两者的取舍在 `retention.replay`（3552 附近）上——没被消费过的流无法重放。
 
@@ -169,7 +169,7 @@ packages/provider-utils/src/post-to-api.ts             fetch()
 
 ```bash
 sed -n '/^  "request"/,/^  }/p' \
-  packages/deepseek/src/chat/__snapshots__/deepseek-chat-language-model.test.ts.snap | head -30
+  ai/packages/deepseek/src/chat/__snapshots__/deepseek-chat-language-model.test.ts.snap | head -30
 ```
 
 `request.body` 就是实际发出去的 JSON。alternatively 用 `pnpm test:watch` 加 `-u` 看 diff。
@@ -177,10 +177,10 @@ sed -n '/^  "request"/,/^  }/p' \
 **2. 用 mock model 跑通整条链路，不花钱**
 
 ```bash
-rg -n "class MockLanguageModelV4" packages/ai/src/test/
+rg -n "class MockLanguageModelV4" ai/packages/ai/src/test/
 ```
 
-`packages/ai/src/test/mock-language-model-v4.ts` 可以指定任意 part 序列，是理解「part 如何变成 `fullStream`」的最佳实验台。
+`ai/packages/ai/src/test/mock-language-model-v4.ts` 可以指定任意 part 序列，是理解「part 如何变成 `fullStream`」的最佳实验台。
 
 **3. 打印 part 类型，对照着看**
 
@@ -192,19 +192,19 @@ cd examples/ai-functions && pnpm tsx src/stream-text/deepseek/basic.ts
 
 ## 11. 速查表
 
-| 想知道                          | 读                                                                                   |
-| ------------------------------- | ------------------------------------------------------------------------------------ |
-| provider 必须实现什么           | `packages/provider/src/language-model/v4/language-model-v4.ts`                       |
-| 模型名字符串怎么变对象          | `packages/ai/src/model/resolve-model.ts:38`                                          |
-| messages 怎么变成 provider 参数 | `packages/ai/src/prompt/convert-to-language-model-prompt.ts:36`                      |
-| 工具 schema 怎么被序列化        | `packages/ai/src/prompt/prepare-tools.ts:15`                                         |
-| 工具怎么被执行                  | `packages/ai/src/generate-text/execute-tool-call.ts`                                 |
-| 多步循环何时停                  | `packages/ai/src/generate-text/stop-condition.ts`                                    |
-| 重试在哪一层                    | `stream-text.ts:2716` 的 `prepareRetries`                                            |
-| 中间件怎么写                    | `packages/ai/src/middleware/wrap-language-model.ts`、`extract-json-middleware.ts`    |
-| HTTP 与 URL 安全                | `packages/provider-utils/src/post-to-api.ts:98`、`fetch-with-validated-redirects.ts` |
-| v3/v4 兼容怎么做的              | `packages/ai/src/model/as-language-model-v3.ts`                                      |
-| 为什么这样设计                  | `architecture/*.md`、`contributing/decisions/`                                       |
+| 想知道                          | 读                                                                                      |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| provider 必须实现什么           | `ai/packages/provider/src/language-model/v4/language-model-v4.ts`                       |
+| 模型名字符串怎么变对象          | `ai/packages/ai/src/model/resolve-model.ts:38`                                          |
+| messages 怎么变成 provider 参数 | `ai/packages/ai/src/prompt/convert-to-language-model-prompt.ts:36`                      |
+| 工具 schema 怎么被序列化        | `ai/packages/ai/src/prompt/prepare-tools.ts:15`                                         |
+| 工具怎么被执行                  | `ai/packages/ai/src/generate-text/execute-tool-call.ts`                                 |
+| 多步循环何时停                  | `ai/packages/ai/src/generate-text/stop-condition.ts`                                    |
+| 重试在哪一层                    | `stream-text.ts:2716` 的 `prepareRetries`                                               |
+| 中间件怎么写                    | `ai/packages/ai/src/middleware/wrap-language-model.ts`、`extract-json-middleware.ts`    |
+| HTTP 与 URL 安全                | `ai/packages/provider-utils/src/post-to-api.ts:98`、`fetch-with-validated-redirects.ts` |
+| v3/v4 兼容怎么做的              | `ai/packages/ai/src/model/as-language-model-v3.ts`                                      |
+| 为什么这样设计                  | `ai/architecture/*.md`、`ai/contributing/decisions/`                                    |
 
 ## 12. 遗留疑问
 

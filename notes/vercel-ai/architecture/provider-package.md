@@ -1,4 +1,4 @@
-# `packages/provider` 简述
+# `ai/packages/provider` 简述
 
 > `@ai-sdk/provider` v4.0.39 ｜ 274 个 `.ts` / 12234 行 ｜ 仓库内 88 个包里 71 个依赖它
 
@@ -20,7 +20,7 @@
 ```
 
 - 它**不依赖 `ai`**，方向是单向的。所以 `provider` 包里找不到 `generateText`、`streamText` 这些名字，只有 `doGenerate` / `doStream`。
-- 唯一的运行时依赖是 `json-schema@^0.4.0`，而且只为一件事：`src/index.ts:31` 重新导出 `JSONSchema7` 类型。该包本身不带类型定义，类型来自 devDependency `@types/json-schema`。
+- 唯一的运行时依赖是 `json-schema@^0.4.0`，而且只为一件事：`ai/packages/provider/src/index.ts:31` 重新导出 `JSONSchema7` 类型。该包本身不带类型定义，类型来自 devDependency `@types/json-schema`。
 
 > 顺带一提：`json-schema` 正是 [`notes/json-schema/`](../../json-schema/README.md) 里那个冻结在 2010 年的老包。2025 年的 AI SDK 仍通过它在类型层面引用 draft-07 的 schema 结构。
 
@@ -41,7 +41,7 @@
 
 ### 3.1 历史：它是从 `ai` 里抽出来的，不是从 `provider` 里乱的
 
-2024-04-11 的 `d544886d4f` _Move AI providers to separate packages (#1326)_ 把 provider 拆成独立 npm 包，同时把原先住在 **`packages/core/spec/util/`**（也就是 `ai` 包内部）的一组工具新建到 `provider-utils`：
+2024-04-11 的 `d544886d4f` _Move AI providers to separate packages (#1326)_ 把 provider 拆成独立 npm 包，同时把原先住在 **`ai/packages/core/spec/util/`**（也就是 `ai` 包内部）的一组工具新建到 `provider-utils`：
 
 `post-to-api.ts`、`parse-json.ts`、`response-handler.ts`、`load-api-key.ts`、`generate-id.ts`、`scale.ts`、`validate-types.ts`、`uint8-utils.ts`……
 
@@ -106,7 +106,7 @@
 
 ## 5. 核心接口：`LanguageModelV4`
 
-`src/language-model/v4/language-model-v4.ts` 全文 61 行，是四个属性 + 两个方法：
+`ai/packages/provider/src/language-model/v4/language-model-v4.ts` 全文 61 行，是四个属性 + 两个方法：
 
 ```ts
 readonly specificationVersion: 'v4';   // 版本判别用，字面量类型
@@ -149,13 +149,13 @@ language-model/v3/language-model-v3.ts   → 'v3'
 language-model/v4/language-model-v4.ts   → 'v4'
 ```
 
-`src/**/index.ts` 三代全导出，因此类型名必须不同（`LanguageModelV2`/`V3`/`V4`）。各模型类型迁移进度并不一致：
+`ai/packages/provider/src/**/index.ts` 三代全导出，因此类型名必须不同（`LanguageModelV2`/`V3`/`V4`）。各模型类型迁移进度并不一致：
 
 | 已有 v4                                                                                                                       | 只有 v3 + v4（无 v2）                                                                    | v2 + v3 + v4 三代并存                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `batch`、`files`、`skills`、`realtime-model`、`decision-model`、`extraction-model`、`speech-translation-model`（**只有 v4**） | `reranking-model`、`video-model`、`image-model-middleware`、`embedding-model-middleware` | `language-model`、`image-model`、`embedding-model`、`speech-model`、`transcription-model`、`provider`、`shared`、`language-model-middleware` |
 
-**本包不做版本适配**。把 v2/v3 模型包装成 v4 的适配器在上层：`packages/ai/src/model/as-language-model-v4.ts`、`as-provider-v4.ts`。这一点常被误解——provider 包只负责「声明三代并行存在」。
+**本包不做版本适配**。把 v2/v3 模型包装成 v4 的适配器在上层：`ai/packages/ai/src/model/as-language-model-v4.ts`、`as-provider-v4.ts`。这一点常被误解——provider 包只负责「声明三代并行存在」。
 
 ## 7. 为什么要分 v2/v3/v4
 
@@ -178,7 +178,7 @@ V4 引入那次提交（`835961299d` _start v7 pre-release cycle_）的说明写
 
 ### 7.2 各代实际破了什么
 
-| 代际    | 破坏性变更（`packages/provider/CHANGELOG.md` 的 Major Changes + 类型 diff）                                                                                                                                                                                                                                              |
+| 代际    | 破坏性变更（`ai/packages/provider/CHANGELOG.md` 的 Major Changes + 类型 diff）                                                                                                                                                                                                                                           |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | v1 → v2 | `specificationVersion` 字段 v1 就有（值 `'v1'`），所以不是它引进的；真影响用户的是 **流式 part 重排**：v1 是扁平 `{type:'text-delta', textDelta}` / `{type:'reasoning', textDelta}`，v2 改成 `text-start/delta/end`、`reasoning-start/delta/end` 配对式，part 也从 `language-model-v1.ts` 内联定义拆成独立文件           |
 | v2 → v3 | `usage` 从扁平数值改成嵌套对象（`inputTokens: number` → `{total, noCache, cacheRead, cacheWrite}`）；`finishReason` 去掉 `'unknown'`；返回值从内联类型提取为 `LanguageModelV3GenerateResult` / `StreamResult`；warning 从 `LanguageModelV2CallWarning` 移到版本无关的 `shared/`，并扩成 4 种；新增 tool approval request |
@@ -193,7 +193,7 @@ V4 引入那次提交（`835961299d` _start v7 pre-release cycle_）的说明写
 不是类型存档。`resolveLanguageModel` 只白名单 `['v4','v3','v2']`，然后把任何老版本交给适配器：
 
 ```ts
-// packages/ai/src/model/as-language-model-v4.ts
+// ai/packages/ai/src/model/as-language-model-v4.ts
 export function asLanguageModelV4(
   model: LanguageModelV2 | V3 | V4,
 ): LanguageModelV4 {
@@ -273,14 +273,14 @@ const symbol = Symbol.for('vercel.ai.error'); // 全局注册表，跨包实例�
 - `tsdown` + 仓库内共享配置（`@vercel/ai-tsdown-config`），**纯 ESM**（`"type": "module"`，`exports` 里没有 CJS 分支）。
 - `"files"` 白名单收得很紧：`dist/**`、`src`（去掉测试与 fixture）、`CHANGELOG.md`、`README.md`。
 - `engines.node >= 22`，`publishConfig.provenance: true`。
-- 测试极薄：`src/` 下只有 1 个 `.test.ts` 和 2 个 `.test-d.ts`（类型测试）。这个包的「正确性」主要靠全仓 71 个下游包的类型检查间接保证。
+- 测试极薄：`ai/packages/provider/src/` 下只有 1 个 `.test.ts` 和 2 个 `.test-d.ts`（类型测试）。这个包的「正确性」主要靠全仓 71 个下游包的类型检查间接保证。
 
 ## 11. 怎么读它
 
-1. `src/language-model/v4/language-model-v4.ts`（61 行）——先看接口形状。
+1. `ai/packages/provider/src/language-model/v4/language-model-v4.ts`（61 行）——先看接口形状。
 2. `language-model-v4-call-options.ts` + `-stream-part.ts`——输入输出词汇表，处处被引用。
 3. `provider/v4/provider-v4.ts`——Provider 门面，看「一个 provider 包必须交出哪几个模型」。
-4. 挑一个真实适配器对照读：`packages/deepseek/src/chat/deepseek-chat-language-model.ts`（见 [`../core/stream-text-walkthrough.md`](../core/stream-text-walkthrough.md) 第 5 站）。
+4. 挑一个真实适配器对照读：`ai/packages/deepseek/src/chat/deepseek-chat-language-model.ts`（见 [`../core/stream-text-walkthrough.md`](../core/stream-text-walkthrough.md) 第 5 站）。
 5. 只有排错时才进 `errors/`。
 
-`src/` 里剩下的 `realtime-model` / `video-model` / `decision-model` / `extraction-model` 属于「用到再看」——它们各自 200~950 行，彼此独立，不构成理解主链路的必要知识。
+`ai/packages/provider/src/` 里剩下的 `realtime-model` / `video-model` / `decision-model` / `extraction-model` 属于「用到再看」——它们各自 200~950 行，彼此独立，不构成理解主链路的必要知识。
