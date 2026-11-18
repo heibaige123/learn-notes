@@ -1,0 +1,5 @@
+# Obsidian vault 状态：workspace.json 每次开合标签页都变，主题/缓存是第三方大文件
+# （Blue Topaz 的 theme.css 有 3 万行，任何格式化检查都会被它拖垮）
+.obsidian/
+
+.DS_Store
