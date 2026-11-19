@@ -57,7 +57,21 @@ flowchart TD
 （`streamdown/packages/streamdown/lib/parse-blocks.tsx` 的 `parseMarkdownIntoBlocks`、
 `streamdown/packages/streamdown/index.tsx` 的 `Block`）。
 
-## 4. Obsidian
+## 4. 本地跑测试
+
+`turbo run test` 只依赖 `^test`，**不**依赖 `^build`，而包之间靠 `dist` 解析（`remend` 的 `exports` 指向 `dist/index.js`）。
+全新检出直接跑测试会看到大批 `Failed to resolve entry for package "remend"`，先建产物：
+
+```bash
+pnpm exec turbo run build --filter='./packages/*'
+pnpm exec turbo run test --filter='./packages/*'
+```
+
+- 受支持的「类型检查」入口只有 `check-types:exact-optional`（先 build，再用 dist 类型检查 `type-tests/`）：`pnpm --filter streamdown check-types:exact-optional`。
+- 直接 `tsc -p tsconfig.json` 会报 `Cannot find module 'mdast' / 'unist'`：两个类型包没在这个包的 devDependencies 里声明，属预期，不是本地改动弄坏的。
+- lint 是 biome：`npx ultracite check packages/streamdown packages/remend`（根目录 `pnpm check` 同义）。
+
+## 5. Obsidian
 
 `notes/` 整体是一个 vault，`.obsidian/` 在 vault 根目录，已在 `notes/.gitignore` 里排除。
 
