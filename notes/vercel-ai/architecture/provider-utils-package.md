@@ -8,13 +8,14 @@
 
 ## 2. 目录构成
 
-```
-src/
-├── 93 个顶层 .ts                ← 按功能散落，无二级归组
-├── types/          29 文件 2018 行   Tool / ToolSet / ModelMessage / ContentPart / provider reference
-├── to-json-schema/ 38 文件 1899 行   内嵌第三方库（见下）
-├── test/            8 文件   96 行   测试工具，走 `@ai-sdk/provider-utils/test` 子路径
-└── experimental-*/          3 文件   实验性子路径入口
+```mermaid
+flowchart LR
+  R["ai/packages/provider-utils/src/"]
+  R --> A1["93 个顶层 .ts<br/>按功能散落，无二级归组"]
+  R --> A2["types/ · 29 文件 2018 行<br/>Tool / ToolSet / ModelMessage / ContentPart / provider reference"]
+  R --> A3["to-json-schema/ · 38 文件 1899 行<br/>内嵌第三方库（见下）"]
+  R --> A4["test/ · 8 文件 96 行<br/>测试工具，走 @ai-sdk/provider-utils/test 子路径"]
+  R --> A5["experimental-*/ · 3 文件<br/>实验性子路径入口"]
 ```
 
 `package.json` 的 `exports` 有 5 个子路径：`.`、`./test`、`./experimental-decision`、`./experimental-evaluation`、`./experimental-extraction`。后三个是**实验 API 的独立入口**，避免污染主入口的类型面。

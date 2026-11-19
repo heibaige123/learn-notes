@@ -6,21 +6,23 @@
 
 AI SDK 是一个 **适配器（adapter）架构** 的三层结构：面向用户的 AI 函数只依赖「模型规范接口」，各 provider 只实现这个接口，中间由共享工具库支撑。
 
-```
-AI 函数层   ai/packages/ai                  generateText / streamText / generateObject / useChat 服务端部分
-    │  依赖（只依赖接口，不依赖具体 provider）
-模型规范层   ai/packages/provider            LanguageModelV4、ImageModelV4、EmbeddingModelV4 ...
-    │  被依赖
-工具层      ai/packages/provider-utils       HTTP 调用、schema、provider options、重试、错误处理
-    │  被依赖
-实现层      ai/packages/<provider>           例如 ai/packages/openai：把 OpenAI API 映射成 LanguageModelV4
+```mermaid
+flowchart TD
+  L1["AI 函数层 · ai/packages/ai<br/>generateText / streamText / generateObject / useChat 服务端部分"]
+  L2["模型规范层 · ai/packages/provider<br/>LanguageModelV4、ImageModelV4、EmbeddingModelV4 …"]
+  L3["工具层 · ai/packages/provider-utils<br/>HTTP 调用、schema、provider options、重试、错误处理"]
+  L4["实现层 · ai/packages/&lt;provider&gt;<br/>例如 openai：把 OpenAI API 映射成 LanguageModelV4"]
+  L1 -->|只依赖接口，不依赖具体 provider| L2
+  L2 -->|被依赖| L3
+  L3 -->|被依赖| L4
 ```
 
 依赖方向严格单向：
 
-```
-ai ─────────────┬──▶ provider-utils ──▶ provider
-@ai-sdk/<provider> ──▶ provider-utils ──▶ provider
+```mermaid
+flowchart LR
+  AI["ai"] --> PU["provider-utils"] --> P["provider"]
+  P2["@ai-sdk/&lt;provider&gt;"] --> PU2["provider-utils"] --> P3["provider"]
 ```
 
 `ai` 永远不 import 具体 provider 的包；它通过「模型对象」或「字符串 id + 全局 provider」拿到一个符合规范的实例（见 4.2）。唯一的编译期例外是 `@ai-sdk/gateway`（`ai/packages/ai/src/model/resolve-model.ts` 用它作为字符串模型的默认解析入口）。
@@ -58,26 +60,27 @@ Monorepo：pnpm workspaces + Turborepo。workspace 划分见 `ai/pnpm-workspace.
 
 按模型能力拆目录，每个目录里是「接口 + 类型 + 版本适配」：
 
-```
-ai/packages/provider/src/
-├── language-model/{v2,v3,v4}/   语言模型（文本、工具调用、推理）
-├── embedding-model/             向量
-├── image-model/                 图像生成
-├── speech-model/                语音合成
-├── transcription-model/         转写
-├── speech-translation-model/    语音翻译
-├── video-model/                 视频生成
-├── reranking-model/             重排
-├── decision-model/              实验性分类/决策
-├── extraction-model/            实验性抽取
-├── batch/                       批处理
-├── files/                       文件上传
-├── skills/                      技能定义
-├── *-middleware/                各模型类型的中间件接口
-├── provider/                    ProviderV4（languageModel() / imageModel() …）
-├── model-capabilities.ts        模型能力元数据契约
-├── errors/                      ProviderError、APICallError、NoSuchModelError…
-└── shared/                      共享基础类型
+```mermaid
+flowchart LR
+  R["ai/packages/provider/src/"]
+  R --> A1["language-model/{v2,v3,v4}/<br/>语言模型（文本、工具调用、推理）"]
+  R --> A2["embedding-model/<br/>向量"]
+  R --> A3["image-model/<br/>图像生成"]
+  R --> A4["speech-model/<br/>语音合成"]
+  R --> A5["transcription-model/<br/>转写"]
+  R --> A6["speech-translation-model/<br/>语音翻译"]
+  R --> A7["video-model/<br/>视频生成"]
+  R --> A8["reranking-model/<br/>重排"]
+  R --> A9["decision-model/<br/>实验性分类/决策"]
+  R --> A10["extraction-model/<br/>实验性抽取"]
+  R --> A11["batch/<br/>批处理"]
+  R --> A12["files/<br/>文件上传"]
+  R --> A13["skills/<br/>技能定义"]
+  R --> A14["*-middleware/<br/>各模型类型的中间件接口"]
+  R --> A15["provider/<br/>ProviderV4（languageModel() / imageModel() …）"]
+  R --> A16["model-capabilities.ts<br/>模型能力元数据契约"]
+  R --> A17["errors/<br/>ProviderError、APICallError、NoSuchModelError…"]
+  R --> A18["shared/<br/>共享基础类型"]
 ```
 
 `LanguageModelV4`（`ai/packages/provider/src/language-model/v4/language-model-v4.ts`）是最重要的接口，只有四个属性 + 两个方法：
@@ -112,29 +115,30 @@ provider 作者实际会用到的东西都在这（`ai/packages/provider-utils/s
 
 `ai/packages/ai/src` 按「一个 AI 函数一个目录」组织，几乎每个目录都包含：函数实现、类型、结果对象、以及大量 `.test.ts`。
 
-```
-ai/packages/ai/src/
-├── generate-text/      generateText、streamText、ToolLoopAgent 的公共机制（工具循环、中间件调用、审批）
-├── generate-object/    generateObject、streamObject
-├── generate-image/     generateImage
-├── generate-speech/    generateSpeech
-├── generate-video/     generateVideo
-├── transcribe/         转写
-├── embed/              embed、embedMany
-├── rerank/             重排
-├── extract/ decide/    实验性函数
-├── agent/              ToolLoopAgent、Agent 抽象
-├── model/              resolve-model.ts + as-*-v4.ts 版本适配
-├── middleware/         wrapLanguageModel 等内置中间件
-├── registry/           provider registry / customProvider
-├── prompt/             system、message、tool、file part 的归一化
-├── text-stream/        把 TextStream 转成 Response
-├── ui-message-stream/  UIMessageChunk 协议（SSE 传输层）
-├── types/              公开类型
-├── telemetry/          telemetry dispatcher、tracing channel
-├── tool-search/        工具检索
-├── batch/ upload-file/ upload-skill/ realtime/
-└── util/ error/ logger/
+```mermaid
+flowchart LR
+  R["ai/packages/ai/src/"]
+  R --> B1["generate-text/<br/>generateText、streamText、ToolLoopAgent 的公共机制（工具循环、中间件调用、审批）"]
+  R --> B2["generate-object/<br/>generateObject、streamObject"]
+  R --> B3["generate-image/<br/>generateImage"]
+  R --> B4["generate-speech/<br/>generateSpeech"]
+  R --> B5["generate-video/<br/>generateVideo"]
+  R --> B6["transcribe/<br/>转写"]
+  R --> B7["embed/<br/>embed、embedMany"]
+  R --> B8["rerank/<br/>重排"]
+  R --> B9["extract/ decide/<br/>实验性函数"]
+  R --> B10["agent/<br/>ToolLoopAgent、Agent 抽象"]
+  R --> B11["model/<br/>resolve-model.ts + as-*-v4.ts 版本适配"]
+  R --> B12["middleware/<br/>wrapLanguageModel 等内置中间件"]
+  R --> B13["registry/<br/>provider registry / customProvider"]
+  R --> B14["prompt/<br/>system、message、tool、file part 的归一化"]
+  R --> B15["text-stream/<br/>把 TextStream 转成 Response"]
+  R --> B16["ui-message-stream/<br/>UIMessageChunk 协议（SSE 传输层）"]
+  R --> B17["types/<br/>公开类型"]
+  R --> B18["telemetry/<br/>telemetry dispatcher、tracing channel"]
+  R --> B19["tool-search/<br/>工具检索"]
+  R --> B20["batch/ upload-file/ upload-skill/ realtime/"]
+  R --> B21["util/ error/ logger/"]
 ```
 
 ## 4. 核心机制

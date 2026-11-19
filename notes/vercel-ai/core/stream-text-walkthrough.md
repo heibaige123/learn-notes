@@ -8,26 +8,16 @@
 
 ## 0. 全局速览
 
-```
-调用方
-  │ streamText({ model, messages, tools, stopWhen })
-  ▼
-ai/packages/ai/src/generate-text/stream-text.ts          streamText → streamTextInternal
-  │  standardizePrompt / convertToLanguageModelPrompt / prepareTools
-  ▼
-ai/packages/ai/src/generate-text/stream-language-model-call.ts
-  │  resolvedModel.doStream({...})                    ← 唯一收敛点
-  ▼
-ai/packages/<provider>/.../xxx-language-model.ts          doStream：构 body、发请求、翻译 chunk
-  │  postJsonToApi
-  ▼
-ai/packages/provider-utils/src/post-to-api.ts             fetch()
-  │  SSE → createEventSourceResponseHandler → ParseResult<chunk>
-  ▲
-  │ provider TransformStream → LanguageModelV4StreamPart
-  │ ai 侧 TransformStream  → LanguageModelStreamPart
-  │ stream-text.ts 主读循环 → TextStreamPart（fullStream）
-  │ stopWhen 判定 → 继续下一步 / 结束
+```mermaid
+flowchart TD
+  A["调用方 streamText({ model, messages, tools, stopWhen })"] --> B["generate-text/stream-text.ts<br/>streamText → streamTextInternal<br/>standardizePrompt / convertToLanguageModelPrompt / prepareTools"]
+  B --> C["generate-text/stream-language-model-call.ts<br/>resolvedModel.doStream({...})  ← 唯一收敛点"]
+  C --> D["ai/packages/&lt;provider&gt;/.../xxx-language-model.ts<br/>doStream：构 body、发请求、翻译 chunk"]
+  D --> E["provider-utils/src/post-to-api.ts<br/>fetch()"]
+  E -.->|SSE → createEventSourceResponseHandler → ParseResult of chunk| D
+  D -.->|provider TransformStream → LanguageModelV4StreamPart| C
+  C -.->|ai 侧 TransformStream → LanguageModelStreamPart| B
+  B -.->|主读循环 → TextStreamPart（fullStream）；stopWhen 判定继续/结束| A
 ```
 
 ---
