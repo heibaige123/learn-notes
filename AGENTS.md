@@ -15,6 +15,8 @@
 
 改代码后跑 `pnpm check`（typecheck + oxlint + oxfmt）；单文件不超过 200 行，`projects/` 和 `notes/` 不参与 lint/format。
 
+查上游源码符号用 codegraph，别 grep：`projects/` 下每个库各有独立索引（`<repo>/.codegraph/`，`codegraph init --local-only` 建的，不进 git）。在库目录里跑 `codegraph explore "<符号或问题>"`，或在会话里用 `codegraph_explore` 带上 `projectPath`；改完源码（`pnpm libs:sync` 之后）跑 `codegraph sync`。仓库根和 `notes/` 没有索引——那是笔记，不是代码。
+
 ## 1. 引用
 
 1. **不写 `projects/` 前缀**：引用本仓库里的文件或整仓，一律从项目目录名写起。
