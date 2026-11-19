@@ -4,6 +4,17 @@
 
 改笔记前先读下面的规则。
 
+`projects/` 下的克隆由根目录 TypeScript 工具管理（`tsx` 直接跑源码，无需构建）：库清单在 `libraries.config.json`，代码在 `src/`，不要手写 clone；新增库只改配置。
+
+| 命令 | 作用 |
+| --- | --- |
+| `pnpm libs:download` | 克隆清单里缺失的库 |
+| `pnpm libs:learn` | 全部切到 `learn` 分支 |
+| `pnpm libs:sync` | 拉取远端主干最新提交并合进 `learn` |
+| `pnpm libs:status` | 巡检分支 / 落后 / 脏文件 |
+
+改代码后跑 `pnpm check`（typecheck + oxlint + oxfmt）；单文件不超过 200 行，`projects/` 和 `notes/` 不参与 lint/format。
+
 ## 1. 引用
 
 1. **不写 `projects/` 前缀**：引用本仓库里的文件或整仓，一律从项目目录名写起。

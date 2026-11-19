@@ -1,0 +1,8 @@
+// oxfmt 只处理本仓库自己的代码；projects/ 里是上游克隆，一律不动
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "endOfLine": "lf",
+  "ignorePatterns": ["projects/**", "notes/**", "node_modules/**", "pnpm-lock.yaml"]
+}

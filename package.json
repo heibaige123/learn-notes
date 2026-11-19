@@ -1,0 +1,35 @@
+{
+  "name": "internal-libs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "learn-notes 内部库：下载 / 切 learn / 同步上游主干",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "libs": "tsx src/cli.ts",
+    "libs:download": "tsx src/cli.ts download",
+    "libs:learn": "tsx src/cli.ts learn",
+    "libs:sync": "tsx src/cli.ts sync",
+    "libs:status": "tsx src/cli.ts status",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
+    "format": "oxfmt src",
+    "format:check": "oxfmt --check src",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check"
+  },
+  "dependencies": {
+    "commander": "^15.1.0",
+    "execa": "^10.2.1",
+    "picocolors": "^1.1.1",
+    "string-width": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

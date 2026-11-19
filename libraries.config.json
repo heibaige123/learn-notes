@@ -1,0 +1,14 @@
+{
+  "root": "projects",
+  "learnBranch": "learn",
+  "libs": [
+    { "name": "ai", "url": "git@github.com:vercel/ai.git" },
+    { "name": "eventsource", "url": "git@github.com:EventSource/eventsource.git" },
+    { "name": "eventsource-client", "url": "git@github.com:rexxars/eventsource-client.git" },
+    { "name": "eventsource-encoder", "url": "git@github.com:rexxars/eventsource-encoder.git" },
+    { "name": "eventsource-parser", "url": "git@github.com:rexxars/eventsource-parser.git" },
+    { "name": "genkit", "url": "git@github.com:genkit-ai/genkit.git" },
+    { "name": "json-schema", "url": "git@github.com:kriszyp/json-schema.git", "baseBranch": "master" },
+    { "name": "sse-channel", "url": "git@github.com:rexxars/sse-channel.git" }
+  ]
+}
