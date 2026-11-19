@@ -9,6 +9,7 @@
     { "name": "eventsource-parser", "url": "git@github.com:rexxars/eventsource-parser.git" },
     { "name": "genkit", "url": "git@github.com:genkit-ai/genkit.git" },
     { "name": "json-schema", "url": "git@github.com:kriszyp/json-schema.git", "baseBranch": "master" },
-    { "name": "sse-channel", "url": "git@github.com:rexxars/sse-channel.git" }
+    { "name": "sse-channel", "url": "git@github.com:rexxars/sse-channel.git" },
+    { "name": "streamdown", "url": "git@github.com:vercel/streamdown.git" }
   ]
 }
