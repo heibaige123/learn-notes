@@ -1,13 +1,23 @@
 {
     "vsicons.presets.nestjs": true,
     "files.exclude": {
-        "**/.git": true,
+        "**/.git": false,
         "**/.svn": true,
         "**/.hg": true,
         "**/.jj": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
-        "notes": true
+        ".probe": true,
+        "src": true,
+        ".oxfmtrc.jsonc": true,
+        ".oxlintrc.json": true,
+        "libraries.config.json": true,
+        "pnpm-workspace.yaml": true,
+        "pnpm-lock.yaml": true,
+        "tsconfig.json": true,
+        ".gitattributes": true,
+        "node_modules": true,
+        "README.md": true
     },
     "python.terminal.useEnvFile": true
 }
