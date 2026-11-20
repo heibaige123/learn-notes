@@ -1,39 +1,55 @@
-# 为什么有好几个 draft 目录
+# draft 目录在讲什么
 
-> 对象：`json-schema` —— kriszyp 的老版 `json-schema` npm 包（v0.4.0，README 自述 "finished"）
+> 五份快照，一个目的：把每一版规范「长什么样」存下来。
 
-## 1. 一句话结论
+## 1. 一句话
 
-`draft-0*` 目录**不是代码模块**，是每一版 JSON Schema 规范的 **meta-schema 快照**，纯存档。运行时一行都不读：
+`draft-00` … `draft-04` **不是代码**，是每一版 JSON Schema 规范的 **meta-schema**（用 schema 描述 schema 自己）。运行时一行都不读，也不进 npm 包。
 
-- `grep -r "draft-" lib/` 无命中
-- `package.json` 的 `files: ["lib"]` 把它们排除在发布包之外
+## 2. 每个目录里有什么
 
-## 2. 每个 draft 目录里是什么
+| 文件           | 作用                                                                |
+| -------------- | ------------------------------------------------------------------- |
+| `schema`       | 核心关键字（`type` / `properties` / `items` …）的元 schema          |
+| `hyper-schema` | 在 core 上叠超媒体：`links`、`readonly`、`contentEncoding`、`pathStart` |
+| `links`        | Link Description Object 的 schema（`href` / `rel` / `method` …）    |
+| `json-ref`     | JSON Reference 规范。draft-00 ~ 03 有；draft-04 并进 core 的 `$ref` 后删掉 |
 
-四份自描述的 schema（用 schema 描述 schema 本身）：
+目录差异就三处：
 
-| 文件           | 作用                                                                            |
-| -------------- | ------------------------------------------------------------------------------- |
-| `schema`       | 核心校验关键字（type / properties / items / …）的元 schema                      |
-| `hyper-schema` | 在 core 上叠加超媒体：`links`、`readonly`、`pathStart`                          |
-| `links`        | Link Description Object 的 schema（href / rel / method / …）                    |
-| `json-ref`     | 独立的 JSON Reference 规范；draft-00~03 有，draft-04 并入 core 的 `$ref` 后删除 |
+- `draft-04` 没有 `json-ref`。
+- `draft-03` 多一个 `examples/`，里面 5 个手写示例（address / calendar / card / geo / interfaces）。前三个是根目录旧示例挪进来的，提交 `8c1e8af` 里能看到 `address`/`calendar`/`card` 从根目录删除、出现在 `draft-03/examples/` 下。
+- 根目录两份 `draft-zyp-json-schema-0{3,4}.xml` 是**规范正文**（IETF Internet-Draft 的 XML 源，作者署名 draft-zyp），不是 schema。
 
-另外：
+## 3. 五版的差别
 
-- `draft-03/examples/` — 5 个手写示例（address / calendar / card / geo / interfaces），对应规范附录
-- 根目录 `draft-zyp-json-schema-03.xml` / `-04.xml` — **规范正文**（IETF Internet-Draft 的 XML 源，Kris Zyp 署名 draft-zyp）
+```mermaid
+flowchart LR
+  A["draft-00"] -->|"只改两个 URL"| B["draft-01"]
+  B -->|"+ uniqueItems + divisibleBy<br/>− maxDecimal"| C["draft-02"]
+  C -->|"$ref / $schema / id<br/>patternProperties / dependencies<br/>exclusiveMinimum / exclusiveMaximum"| D["draft-03"]
+  D -->|"required 改成数组<br/>+ minProperties / maxProperties"| E["draft-04"]
+```
 
-## 3. 版本演进（按 `schema` 的关键字集合做逐版 diff）
+| 版本 | 关键字的数量 | 相对上一版                             |
+| ---- | ------------ | -------------------------------------- |
+| 00   | 24           | —                                      |
+| 01   | 24           | 只改 URI，语义零变化                   |
+| 02   | 25           | 加 `uniqueItems`、`divisibleBy`；删 `maxDecimal` |
+| 03   | 29           | 大改，现代骨架成型（`contentEncoding` 挪去 hyper-schema） |
+| 04   | 30           | 加 `minProperties`、`maxProperties`；`required` 变数组 |
 
-### 3.1 draft-00 → draft-01：只改 URI
+（数量是把 `schema` 的 `properties` 键数出来得到的，可以自己跑 `node -e` 复核。）
 
-字节级只差 URL 命名空间（commit `8c1e8af` _"Schema URIs are now namespace versioned"_）。
+## 4. 逐版细看
 
-即 draft-01 的全部意义就是「URI 带版本号」，语义零变化 —— 所以打开这两份文件会觉得完全重复。别误判成仓库冗余。
+### 4.1 draft-00 → draft-01：只改了 URL
 
-### 3.2 draft-01 → draft-02
+两份文件 `diff` 完只有两行不同：`$schema` 和 `id` 的域名里 `draft-00` 变成 `draft-01`（提交 `8c1e8af` 的说明是 "Schema URIs are now namespace versioned"）。
+
+所以打开这两份文件会觉得完全重复 —— 不是冗余，是给旧 URI 留的兼容层。
+
+### 4.2 draft-01 → draft-02
 
 ```
 + uniqueItems
@@ -41,55 +57,87 @@
 - maxDecimal
 ```
 
-### 3.3 draft-02 → draft-03：最大的语义断裂
-
-现代 JSON Schema 的骨架到这里才成型。
-
-| 变化              | 细节                                                                            |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `required` 改形态 | 从布尔 `{"required": true}` → 字符串数组 `{"required": ["a","b"]}`              |
-| 删除              | `optional`、`requires`、`minimumCanEqual`、`maximumCanEqual`                    |
-| 换成              | `exclusiveMinimum`、`exclusiveMaximum`                                          |
-| 新增              | `$ref`、`$schema`、`id`、`patternProperties`、`additionalItems`、`dependencies` |
-
-### 3.4 draft-03 → draft-04
+### 4.3 draft-02 → draft-03：真正的断裂
 
 ```
-+ minProperties
-+ maxProperties
++ $ref  $schema  id  required  dependencies
++ patternProperties  additionalItems
++ exclusiveMinimum  exclusiveMaximum
+
+- optional  requires  minimumCanEqual  maximumCanEqual
+- contentEncoding（从 core 挪去了 hyper-schema）
 ```
 
-- `id`：从 `{"type":"string","format":"uri"}` 降级成裸 `{"type":"string"}`
-- `type`：抽出 `#simple-type` 定义（枚举里加入 `"any"`），items 改为 `$ref` 到它
+这里最容易记错的是 `required`，它的演变其实是三段：
 
-## 4. 代码只实现到 draft-02/03 的子集
+| 版本 | 写法                                             | 位置     |
+| ---- | ------------------------------------------------ | -------- |
+| 02   | `"optional": false`（根本没有 `required`）       | 属性上   |
+| 03   | `"required": true`（布尔，替换掉 `optional`）    | 属性上   |
+| 04   | `"required": ["a", "b"]`（字符串数组）           | 对象上   |
 
-`lib/validate.js`（271 行）仍是老式实现，`checkProp` 里读的是**布尔版** `schema.required`，以及 `schema.extends`、`schema.disallow`、`maxDecimal` —— 全是 draft-03 之前的关键字。
+所以「布尔变数组」是 **03 → 04** 的变化，不是 02 → 03。`draft-03/schema` 里 `required` 的定义就是 `{"type": "boolean", "default": false}`，`draft-04/schema` 里才是 `{"type": "array", "items": {"type": "string"}}`。
 
-draft-03 的新关键字**一个都没实现**（grep 无命中）：
+### 4.4 draft-03 → draft-04
 
-`divisibleBy`、`uniqueItems`、`patternProperties`、`dependencies`、`additionalItems`、`exclusiveMinimum/Maximum`
+```
++ minProperties  maxProperties
+- format
+```
 
-`test/tests.js:9` 虽然写着 `var revision = 'draft-03'`，测的也是这套老关键字，字样和实现并不对应。
+另外两处形态变化：
 
-> **为什么这个包能在 npm 上活那么久**：恰恰因为它**不追规范**。README 明说为了「依赖它的无数包的行为与体积稳定」而冻结在原始实现上。
+- `id` 从 `{"type": "string", "format": "uri"}` 变成裸的 `{"type": "string"}`。
+- `type` 把简单类型抽成一个内联定义（`id: "#simple-type"`，枚举里多了 `"any"`），`items` 改成 `$ref` 指向它。
 
-## 5. 两个坑
+注意这里的 `- format` 是**本仓库这份副本的问题**，不是规范的变化 —— 真实的 draft-04 是有 `format` 的。根目录的 `draft-zyp-json-schema-04.xml` 里提到 `format` 17 次，`draft-04/schema` 里一次都没有，对照着看就能确认这份 schema 是残缺的。
 
-1. **本仓库的 `draft-04/schema` 是不完整副本**：里面**没有 `format` 关键字**（真实 draft-04 规范有）。别拿它当 draft-04 权威参考 —— 要查规范用 `draft-zyp-json-schema-04.xml` 或 json-schema.org。
-2. **draft-00 / draft-01 内容几乎完全相同**，只是历史 URI 兼容层，不是冗余文件。
+## 5. 实现停在哪一代
 
-## 6. 阅读路径
+`validate.js` 是个**混合子集**：既读了 draft-03 的属性布尔 `required`，也读了 draft-02 的 `requires` / `maxDecimal` / `disallow` / `extends`。它没有完整实现任何一版。
 
-| 想知道                         | 看哪里                                                                 |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| 规范说了什么                   | `draft-03/schema` + `draft-zyp-json-schema-03.xml`                     |
-| 校验器最小实现长什么样         | `lib/validate.js` —— `checkProp` / `checkObj` 两个闭包函数就是全部     |
-| hyper-schema 的 links 怎么落地 | `lib/links.js` —— `getLink` 从 schema 的 `links` 里按 rel 取 href 模板 |
+| 关键字                     | 实现 | 说明                                              |
+| -------------------------- | ---- | ------------------------------------------------- |
+| `type` `extends` `disallow` | ✅   | `checkProp`                                       |
+| `required`（属性布尔）     | ✅   | 只看真假，数组写法不认                            |
+| `requires`（draft-02）     | ✅   | `checkObj` 第二轮                                 |
+| `properties` `additionalProperties` | ✅ | `checkObj`                                   |
+| `items` `minItems` `maxItems` | ✅ | 数组分支                                          |
+| `pattern` `minLength` `maxLength` | ✅ | 字符串分支                                    |
+| `minimum` `maximum`        | ✅   | 只在 `typeof` 两边相同时比较                      |
+| `maxDecimal` `enum`        | ✅   | 前者数小数位，后者用 `===`                        |
+| `default` `readonly`       | ✅   | `default` 只认真值；`readonly` 只在 changing 模式 |
+| `optional`（draft-02）     | ❌   | 代码里没这个词                                    |
+| `format`                   | ❌   | 只有一句注释提到                                   |
+| `uniqueItems` `divisibleBy` | ❌  | draft-02 就有，但没实现                           |
+| `$ref` `id` `dependencies` | ❌   | draft-03 的核心新增，一个都没接                    |
+| `patternProperties` `additionalItems` | ❌ | 同上                                        |
+| `exclusiveMinimum` `exclusiveMaximum` | ❌ | 同上                                        |
+| `minProperties` `maxProperties` | ❌ | draft-04 新增                                   |
+| `$schema`                  | ⚠️   | 只当内联 schema 对象用，URI 字符串会报错           |
 
-## 7. 关键提交
+这张表解释了为什么 README 要说「行为与体积稳定」：它连 draft-02 都没实现全，任何「补一个关键字」的改动都会改变下游包的结果。
 
-| commit                 | 内容                                                         |
-| ---------------------- | ------------------------------------------------------------ |
-| `8c1e8af` (2010-11-11) | URI 命名空间版本化，一次性加入 draft-00/01/02/03 全部 schema |
-| `e22117f` (2011-11-15) | 初版 draft-04 schema，规范正文加入 JSON Pointer              |
+## 6. 两个坑
+
+1. **本仓库的 `draft-04/schema` 不完整**：里面没有 `format`，但同仓库的 `draft-zyp-json-schema-04.xml` 里提了 17 次。别拿这份 schema 当权威参考，查规范看 XML 或 json-schema.org。
+2. **draft-00 和 draft-01 内容几乎相同**，只有两行 URL 不一样。别以为是复制粘贴出错。
+
+## 7. 这些快照唯一的实际用途
+
+`test/tests.js` 拿 `draft-03` 的 schema **校验它们自己**，四个文件都加载两遍：一次原样，一次删掉 `$schema`（变量名加 `-nsd` 后缀）。原样那份过不了 —— 因为 `$schema` 的值是 URI 字符串，校验器会把它当 schema 用（见 [quirks](quirks.md) 第 5 条）。实际跑起来只有 `-nsd` 的三组在用。
+
+```bash
+cd projects/json-schema && npx --no-install vows --spec test/*.js
+# ✓ OK » 12 honored
+```
+
+实际在跑的自校验只有 `-nsd` 三组（另外还有三条安全回归）。所以 `draft-0*` 目录在这个仓库里**不参与运行**，只用来做一次自我验证。这也是判断「这仓库要不要动」的一个信号：连测试都只测自己能吃下自己的 schema。
+
+## 8. 关键提交
+
+| commit                 | 内容                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| `8c1e8af` (2010-11-11) | URI 加版本命名空间，一次性放进 draft-00 ~ 03 全部 schema，删掉旧示例 |
+| `e22117f` (2011-11-15) | 初版 draft-04 schema，规范正文加入 JSON Pointer                       |
+| `5a2ec23` (2021-11-24) | 合并 `hasOwnProperty` 安全修复，仓库最后一次实质改动                  |
